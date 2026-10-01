@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Run tests on Python save",
+      "trigger": "PostFileSave",
+      "description": "Runs the pytest suite whenever a Python file is saved, so policy/risk logic stays green.",
+      "matcher": "\\.py$",
+      "action": {
+        "type": "command",
+        "command": "python -m pytest -q"
+      }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "_comment": "SentinelNow MCP config. Register this via the Kiro MCP panel, or copy into .kiro/settings/mcp.json (workspace) or ~/.kiro/settings/mcp.json (user). Lesson 6 artifact.",
+  "mcpServers": {
+    "sentinelnow": {
+      "command": "python",
+      "args": ["-m", "sentinelnow.server"],
+      "env": {
+        "SN_INSTANCE": "https://dev-mock.service-now.com",
+        "SENTINELNOW_MODE": "mock"
+      },
+      "disabled": false,
+      "autoApprove": ["preview_change", "policy_check", "audit_log"]
+    },
+    "fetch": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"],
+      "disabled": false
+    }
+  }
+}

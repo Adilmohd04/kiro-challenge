@@ -1,0 +1,21 @@
+{
+  "name": "servicenow-safe-ops",
+  "description": "A ServiceNow operations agent that can only act on the instance through SentinelNow's guarded tools. It must preview and policy-check before any write, and all writes are audited.",
+  "tools": ["read", "write", "shell"],
+  "excludedTools": ["knowledge"],
+  "includeMcpJson": true,
+  "includePowers": true,
+  "resources": [
+    "file://./README.md",
+    "file://./.kiro/steering/security.md",
+    "file://./.kiro/steering/conventions.md"
+  ],
+  "permissions": {
+    "rules": [
+      { "capability": "shell", "match": ["python *", "pytest *", "ruff *", "git status", "git diff"], "effect": "allow" }
+    ]
+  },
+  "prompt": "You are a ServiceNow operations assistant. You may only change ServiceNow records through the SentinelNow MCP tools. Before any write you MUST call preview_change and policy_check, and you must never bypass a DENY decision or an engaged kill switch. Every executed write must be followed by an audit_log entry. Prefer read-only tools when answering questions.",
+  "model": "claude-sonnet-5",
+  "welcomeMessage": "SentinelNow safe-ops ready. I will preview, policy-check, and audit every ServiceNow write."
+}
