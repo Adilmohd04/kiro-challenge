@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 
 from pydantic import BaseModel
 
-from .models import Decision, WriteRequest
+from .models import Decision, Effect, WriteRequest
 
 
 class AuditEntry(BaseModel):
@@ -43,6 +43,36 @@ class AuditLog:
             effect=decision.effect.value,
             risk_score=decision.risk_score,
             applied=applied,
+        )
+        self._entries.append(entry)
+        return entry
+
+    def record_event(self, actor: str, action: str, result: str) -> AuditEntry:
+        """Record a non-record gateway event (e.g. kill-switch engage/release).
+
+        Reuses the closed AuditEntry key set so the audit log stays uniform and
+        append-only (Req 9.1). ``actor`` is the invoking identity (who), ``action``
+        is the event (what, e.g. "engage"/"release"), and ``result`` the outcome.
+        A sentinel ``table`` marks this as a gateway event rather than a record
+        write; ``record_ids`` is empty and no secret/credential value is included.
+
+        The effect is mapped from the action to a valid :class:`Effect` value:
+        engaging the kill switch moves the gateway to a deny-all posture
+        (``Effect.DENY``), releasing it restores the allow posture
+        (``Effect.ALLOW``).
+        """
+        effect = Effect.DENY if action == "engage" else Effect.ALLOW
+        entry = AuditEntry(
+            audit_id=str(uuid.uuid4()),
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            agent_id=actor,
+            table="__killswitch__",
+            operation=action,
+            record_ids=[],
+            reason=f"kill switch {action}: {result}",
+            effect=effect.value,
+            risk_score=0,
+            applied=True,
         )
         self._entries.append(entry)
         return entry

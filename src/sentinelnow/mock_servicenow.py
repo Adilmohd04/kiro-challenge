@@ -22,7 +22,7 @@ class MockServiceNow:
     def get(self, table: str, sys_id: str) -> dict[str, str] | None:
         return self._tables.get(table, {}).get(sys_id)
 
-    def preview(self, req: WriteRequest) -> list[dict[str, str]]:
+    async def preview(self, req: WriteRequest) -> list[dict[str, str]]:
         """Return the before/after of what WOULD change. Never mutates."""
         changes: list[dict[str, str]] = []
         for sys_id in req.record_ids or ["<new>"]:
@@ -31,7 +31,7 @@ class MockServiceNow:
             changes.append({"sys_id": sys_id, "before": str(before), "after": str(after)})
         return changes
 
-    def apply(self, req: WriteRequest) -> int:
+    async def apply(self, req: WriteRequest) -> int:
         """Apply the change for real (mock). Returns number of affected records."""
         table = self._tables.setdefault(req.table, {})
         affected = 0

@@ -4,8 +4,9 @@ version = "0.1.0"
 description = "An AI-agent safety gateway for ServiceNow: preview, risk-score, policy-gate, audit, and kill-switch every write an AI agent makes."
 requires-python = ">=3.11"
 dependencies = [
-  "pydantic==2.9.2",
+  "pydantic==2.12.0",
   "httpx==0.27.2",
+  "mcp==1.30.0",
 ]
 
 [project.optional-dependencies]

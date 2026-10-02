@@ -1,0 +1,275 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Pin dependencies in `pyproject.toml`": [
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790874028020
+      },
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790874762692
+      }
+    ],
+    "1.2 Extend `src/sentinelnow/errors.py` with new typed exceptions": [
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790874028958
+      },
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790874763512
+      }
+    ],
+    "1. Dependencies, tooling, and typed errors (foundation)": [
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790874763614
+      }
+    ],
+    "2.1 Extend hypothesis strategies in `tests/test_policy_properties.py`": [
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790874771700
+      },
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790878940875
+      }
+    ],
+    "2.2 Write property test for Property 1 (risk score bounded)": [
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790878950288
+      },
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790879666826
+      }
+    ],
+    "2.3 Write property test for Property 2 (deterministic)": [
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790878951317
+      },
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790879667638
+      }
+    ],
+    "2.4 Write property test for Property 3 (monotonic in operation severity)": [
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790878953739
+      },
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790879669031
+      }
+    ],
+    "2.5 Write property test for Property 4 (kill switch denies all)": [
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790878954048
+      },
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790879670590
+      }
+    ],
+    "2.6 Write property test for Property 5 (batch gating)": [
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790878955486
+      },
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790879671507
+      }
+    ],
+    "2.7 Write property test for Property 6 (delete-deny by default)": [
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790878956395
+      },
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790879672859
+      }
+    ],
+    "2.8 Write property test for Property 7 (protected-priority approval)": [
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790878957800
+      },
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790879674323
+      }
+    ],
+    "2.9 Reconcile `src/sentinelnow/policy.py` with the properties": [
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790879681873
+      },
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790879754473
+      }
+    ],
+    "2. Policy core property tests (pure logic, Properties 1–7)": [
+      {
+        "executionId": "3795e29a-1b1a-4976-bb85-cf286b2b3139",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790879754854
+      }
+    ],
+    "4.1 Introduce the async `ServiceNowInstance` Protocol": [
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790916335281
+      },
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790916433874
+      }
+    ],
+    "4.2 Make `MockServiceNow.preview` / `apply` async": [
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790916441901
+      },
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790916510200
+      }
+    ],
+    "4. Async instance Protocol and async mock": [
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790916510305
+      }
+    ],
+    "5.1 Make gateway I/O methods async and type to the Protocol": [
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790916517670
+      },
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790916634438
+      }
+    ],
+    "5.2 Add actor + audit to kill-switch methods": [
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790916643797
+      },
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790916817096
+      }
+    ],
+    "5. Async gateway refactor": [
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790916817180
+      }
+    ],
+    "10.1 Add MCP request/response pydantic models": [
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790916824824
+      },
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790916896963
+      }
+    ],
+    "10.2 Register the five MCP tools in `src/sentinelnow/server.py`": [
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790916941194
+      },
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790920680107
+      }
+    ],
+    "10.3 Map typed exceptions to structured MCP tool error responses": [
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790920680958
+      },
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790920920236
+      }
+    ],
+    "10. MCP tool models and server wiring": [
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790920920428
+      }
+    ],
+    "11.4 Verify build, lint, and full test suite": [
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790920928039
+      },
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790921076007
+      }
+    ],
+    "11. Boundary, example, and integration tests (wiring)": [
+      {
+        "executionId": "8450dc71-c6a5-49b6-b505-c24589d69b53",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790921076152
+      }
+    ]
+  }
+}
