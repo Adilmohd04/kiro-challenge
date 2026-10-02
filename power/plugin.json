@@ -1,0 +1,20 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "sentinelnow",
+  "version": "0.1.0",
+  "description": "Safety gateway for AI agents acting on ServiceNow: preview, risk-score, policy-gate, audit, and kill-switch every write before it touches the instance.",
+  "author": {
+    "name": "Adilmohd04"
+  },
+  "keywords": [
+    "servicenow",
+    "mcp",
+    "ai-agent",
+    "governance",
+    "guardrails",
+    "audit",
+    "safety",
+    "kill-switch",
+    "itsm"
+  ]
+}
