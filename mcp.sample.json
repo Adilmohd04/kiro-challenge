@@ -1,9 +1,10 @@
 {
-  "_comment": "SentinelNow MCP config. Register this via the Kiro MCP panel, or copy into .kiro/settings/mcp.json (workspace) or ~/.kiro/settings/mcp.json (user). Lesson 6 artifact.",
+  "_comment": "SentinelNow MCP config. Register this via the Kiro MCP panel, or copy into .kiro/settings/mcp.json (workspace) or ~/.kiro/settings/mcp.json (user). Lesson 6 artifact. On this machine Python is provided by uv, so the sentinelnow server launches via 'uv run'. Set 'cwd' to the repo root so uv finds pyproject.toml.",
   "mcpServers": {
     "sentinelnow": {
-      "command": "python",
-      "args": ["-m", "sentinelnow.server"],
+      "command": "uv",
+      "args": ["run", "python", "-m", "sentinelnow.server"],
+      "cwd": "c:\\Users\\Ashi\\Desktop\\kiro-crashcourse",
       "env": {
         "SN_INSTANCE": "https://dev-mock.service-now.com",
         "SENTINELNOW_MODE": "mock"
