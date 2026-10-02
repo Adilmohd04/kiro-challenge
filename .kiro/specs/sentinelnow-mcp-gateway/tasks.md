@@ -99,32 +99,32 @@ logs never contain secret values or `WriteRequest.fields` contents.
     - Change `engage_kill_switch(actor: str) -> AuditEntry` and `release_kill_switch(actor: str) -> AuditEntry` to set state and record one `AuditEntry` capturing the actor, action, and result; return the entry.
     - _Requirements: 3.2, 3.3_
 
-- [ ] 6. Gateway and audit property tests (Properties 8–12)
-  - [ ] 6.1 Create `tests/test_gateway_properties.py` scaffolding
+- [x] 6. Gateway and audit property tests (Properties 8–12)
+  - [x] 6.1 Create `tests/test_gateway_properties.py` scaffolding
     - Add helpers to seed a fresh `MockServiceNow` per example and snapshot `_tables` (deep copy) for before/after comparison; add a driver to run async `guarded_write` via `asyncio.run` (or anyio); add an in-memory `StubServiceNowClient` implementing the async `ServiceNowInstance` Protocol for parity.
     - _Requirements: 11.1, 11.3; Design: Correctness Properties > Generators / strategies_
 
-  - [ ]* 6.2 Write property test for Property 8 (read-only tools never mutate)
+  - [x]* 6.2 Write property test for Property 8 (read-only tools never mutate)
     - **Property 8** — `preview_change` and `policy_check` leave instance state identical; `policy_check` returns an effect in {ALLOW, NEEDS_APPROVAL, DENY}.
     - Tag: `# Feature: sentinelnow-mcp-gateway, Property 8`.
     - **Validates: Requirements 6.1, 6.2, 6.3**
 
-  - [ ]* 6.3 Write property test for Property 9 (non-ALLOW never mutates; typed exceptions)
+  - [x]* 6.3 Write property test for Property 9 (non-ALLOW never mutates; typed exceptions)
     - **Property 9** — non-ALLOW leaves state unchanged and raises the matching typed exception (`KillSwitchEngaged` taking precedence, `PolicyDenied`, `ApprovalRequired`); ALLOW mutates and returns `applied=True` with non-empty `audit_id`.
     - Tag: `# Feature: sentinelnow-mcp-gateway, Property 9`.
     - **Validates: Requirements 3.4, 7.2, 7.3, 7.4, 7.5, 8.5**
 
-  - [ ]* 6.4 Write property test for Property 10 (exactly one audit entry; applied flag matches)
+  - [x]* 6.4 Write property test for Property 10 (exactly one audit entry; applied flag matches)
     - **Property 10** — one `AuditEntry` per `guarded_write` (return or raise); `applied` true iff instance changed; `audit_id` values pairwise unique; log is append-only.
     - Tag: `# Feature: sentinelnow-mcp-gateway, Property 10`.
     - **Validates: Requirements 4.3, 5.1, 5.2, 5.3, 5.4, 5.5, 7.6**
 
-  - [ ]* 6.5 Write property test for Property 11 (audit excludes secrets and record contents)
+  - [x]* 6.5 Write property test for Property 11 (audit excludes secrets and record contents)
     - **Property 11** — the `AuditEntry` serializes to exactly `audit_id, timestamp, agent_id, table, operation, record_ids, reason, effect, risk_score, applied` and contains none of `req.fields` keys/values.
     - Tag: `# Feature: sentinelnow-mcp-gateway, Property 11`.
     - **Validates: Requirements 5.6, 9.1, 9.2**
 
-  - [ ]* 6.6 Write property test for Property 12 (backend-independent decision)
+  - [x]* 6.6 Write property test for Property 12 (backend-independent decision)
     - **Property 12** — decision effect, `risk_score`, and resulting `AuditEntry` effect/risk are identical whether backed by `MockServiceNow` or `StubServiceNowClient`.
     - Tag: `# Feature: sentinelnow-mcp-gateway, Property 12`.
     - **Validates: Requirements 11.3**

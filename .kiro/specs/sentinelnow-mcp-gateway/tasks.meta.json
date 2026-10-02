@@ -270,6 +270,85 @@
         "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
         "timestamp": 1790921076152
       }
+    ],
+    "6.1 Create `tests/test_gateway_properties.py` scaffolding": [
+      {
+        "executionId": "e01fdc9c-83b5-4f91-b4e8-6403ce3729a8",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790940369905
+      },
+      {
+        "executionId": "e01fdc9c-83b5-4f91-b4e8-6403ce3729a8",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790940724443
+      }
+    ],
+    "6.2 Write property test for Property 8 (read-only tools never mutate)": [
+      {
+        "executionId": "e01fdc9c-83b5-4f91-b4e8-6403ce3729a8",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790940726806
+      },
+      {
+        "executionId": "e01fdc9c-83b5-4f91-b4e8-6403ce3729a8",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790941450619
+      }
+    ],
+    "6. Gateway and audit property tests (Properties 8–12)": [
+      {
+        "executionId": "e01fdc9c-83b5-4f91-b4e8-6403ce3729a8",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790940730406
+      }
+    ],
+    "6.3 Write property test for Property 9 (non-ALLOW never mutates; typed exceptions)": [
+      {
+        "executionId": "e01fdc9c-83b5-4f91-b4e8-6403ce3729a8",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790940731522
+      },
+      {
+        "executionId": "e01fdc9c-83b5-4f91-b4e8-6403ce3729a8",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790941454446
+      }
+    ],
+    "6.4 Write property test for Property 10 (exactly one audit entry; applied flag matches)": [
+      {
+        "executionId": "e01fdc9c-83b5-4f91-b4e8-6403ce3729a8",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790940732873
+      },
+      {
+        "executionId": "e01fdc9c-83b5-4f91-b4e8-6403ce3729a8",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790941458208
+      }
+    ],
+    "6.5 Write property test for Property 11 (audit excludes secrets and record contents)": [
+      {
+        "executionId": "e01fdc9c-83b5-4f91-b4e8-6403ce3729a8",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790940733692
+      },
+      {
+        "executionId": "e01fdc9c-83b5-4f91-b4e8-6403ce3729a8",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790941463201
+      }
+    ],
+    "6.6 Write property test for Property 12 (backend-independent decision)": [
+      {
+        "executionId": "e01fdc9c-83b5-4f91-b4e8-6403ce3729a8",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790940735708
+      },
+      {
+        "executionId": "e01fdc9c-83b5-4f91-b4e8-6403ce3729a8",
+        "chatSessionId": "sess_57e60240-7f06-433d-95d4-7a73ff0041fc",
+        "timestamp": 1790941466591
+      }
     ]
   }
 }
