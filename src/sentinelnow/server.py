@@ -2,7 +2,7 @@
 
 Exposes the SentinelNow gateway as five MCP tools an AI agent can call over stdio:
   - preview_change  (read-only)
-  - policy_check    (read-only, pure)
+  - policy_check    (read-only; reads current record state to evaluate policy)
   - guarded_write   (the only mutating tool)
   - audit_log       (read-only)
   - kill_switch     (state change, audited)
