@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "sentinelnow": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "sentinelnow.server"],
+      "cwd": "c:\\Users\\Ashi\\Desktop\\kiro-crashcourse",
+      "env": {
+        "SN_INSTANCE": "https://dev-mock.service-now.com",
+        "SENTINELNOW_MODE": "mock"
+      },
+      "disabled": false,
+      "autoApprove": ["preview_change", "policy_check", "audit_log"]
+    }
+  }
+}
