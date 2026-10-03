@@ -20,6 +20,15 @@ from .models import WriteRequest
 class ServiceNowInstance(Protocol):
     """Structural interface for a ServiceNow backend (mock or real client)."""
 
+    async def get_record(self, table: str, sys_id: str) -> dict[str, str] | None:
+        """Read a single record's current fields. Read-only; MUST NOT mutate.
+
+        Returns the record's field dict, or ``None`` when the record is absent.
+        The gateway uses this to learn the record's CURRENT state (e.g. its
+        current priority) so policy can gate on it.
+        """
+        ...
+
     async def preview(self, req: WriteRequest) -> list[dict[str, str]]:
         """Return the before/after of what WOULD change. MUST NOT mutate. (Req 6.2)"""
         ...

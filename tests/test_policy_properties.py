@@ -135,9 +135,16 @@ def test_deletes_denied_unless_allowed(req: WriteRequest, policy: Policy) -> Non
 @given(
     req=write_requests,
     protected=st.lists(st.sampled_from(["1", "2", "3"]), max_size=3),
+    current_priorities=st.lists(st.sampled_from(["1", "2", "3"]), max_size=3),
 )
-def test_protected_priority_requires_approval(req: WriteRequest, protected: list[str]) -> None:
-    """Property 7: a protected priority maps to NEEDS_APPROVAL exactly when configured.
+def test_protected_priority_requires_approval(
+    req: WriteRequest, protected: list[str], current_priorities: list[str]
+) -> None:
+    """Property 7: touching a protected priority maps to NEEDS_APPROVAL when configured.
+
+    The rule must fire when EITHER the record's CURRENT priority OR the target
+    priority in ``req.fields`` is protected — so an agent cannot downgrade or
+    modify a record that is currently a protected priority.
 
     Isolates the priority rule: kill switch off, deletes allowed, batch within limit.
 
@@ -150,10 +157,13 @@ def test_protected_priority_requires_approval(req: WriteRequest, protected: list
         protected_priorities=protected,
         kill_switch_engaged=False,
     )
-    decision = evaluate_policy(req, policy)
-    priority = req.fields.get("priority")
+    decision = evaluate_policy(req, policy, current_priorities)
+    target_priority = req.fields.get("priority")
+    touches_protected = (target_priority in protected) or any(
+        p in protected for p in current_priorities
+    )
 
-    if protected and priority in protected:
+    if protected and touches_protected:
         assert decision.effect is Effect.NEEDS_APPROVAL
     elif not protected:
         # Empty protected set: never NEEDS_APPROVAL on the basis of protected priority.

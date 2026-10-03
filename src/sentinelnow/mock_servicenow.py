@@ -22,6 +22,10 @@ class MockServiceNow:
     def get(self, table: str, sys_id: str) -> dict[str, str] | None:
         return self._tables.get(table, {}).get(sys_id)
 
+    async def get_record(self, table: str, sys_id: str) -> dict[str, str] | None:
+        """Read a single record's current fields. Read-only; never mutates."""
+        return self.get(table, sys_id)
+
     async def preview(self, req: WriteRequest) -> list[dict[str, str]]:
         """Return the before/after of what WOULD change. Never mutates."""
         changes: list[dict[str, str]] = []

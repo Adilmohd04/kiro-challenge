@@ -100,6 +100,10 @@ class StubServiceNowClient:
     def get(self, table: str, sys_id: str) -> dict[str, str] | None:
         return self._tables.get(table, {}).get(sys_id)
 
+    async def get_record(self, table: str, sys_id: str) -> dict[str, str] | None:
+        """Read a single record's current fields. Read-only; never mutates."""
+        return self.get(table, sys_id)
+
     async def preview(self, req: WriteRequest) -> list[dict[str, str]]:
         """Return before/after of what WOULD change. Never mutates (Req 6.2)."""
         changes: list[dict[str, str]] = []
@@ -135,6 +139,52 @@ def test_stub_satisfies_protocol() -> None:
     assert snap["incident"]["INC0001"]["priority"] == "1"
 
 
+def test_protected_current_priority_blocks_downgrade() -> None:
+    """Acceptance: updating a currently-protected record requires approval and does not apply.
+
+    INC0001 is seeded at priority "1" (protected by the default policy). An UPDATE
+    that sets priority to a non-protected "2" must still be gated: ``policy_check``
+    returns NEEDS_APPROVAL and ``guarded_write`` raises ``ApprovalRequired`` while
+    leaving the instance byte-for-byte unchanged. A matching UPDATE to the
+    non-protected INC0002 (current priority "3") is ALLOWed and applied.
+    """
+    gw = make_gateway(fresh_mock(seeded=True), Policy())
+
+    # (a) currently-protected INC0001 -> NEEDS_APPROVAL, no mutation.
+    protected_req = WriteRequest(
+        agent_id="agent-1",
+        table="incident",
+        operation=Operation.UPDATE,
+        record_ids=["INC0001"],
+        fields={"priority": "2"},
+        reason="attempt to downgrade a P1 incident",
+    )
+    decision = run(gw.policy_check(protected_req))
+    assert decision.effect is Effect.NEEDS_APPROVAL
+
+    before = snapshot(gw._instance)
+    with pytest.raises(ApprovalRequired):
+        run(gw.guarded_write(protected_req))
+    after = snapshot(gw._instance)
+    assert before == after
+    assert after["incident"]["INC0001"]["priority"] == "1"
+
+    # (b) non-protected INC0002 -> ALLOW and applied.
+    allowed_req = WriteRequest(
+        agent_id="agent-1",
+        table="incident",
+        operation=Operation.UPDATE,
+        record_ids=["INC0002"],
+        fields={"state": "3"},
+        reason="advance a non-protected incident",
+    )
+    decision = run(gw.policy_check(allowed_req))
+    assert decision.effect is Effect.ALLOW
+    result = run(gw.guarded_write(allowed_req))
+    assert result.applied is True
+    assert gw._instance._tables["incident"]["INC0002"]["state"] == "3"
+
+
 # Feature: sentinelnow-mcp-gateway, Property 8: preview_change and policy_check never mutate the instance
 # deadline disabled: driving async calls via asyncio.run has first-call warm-up timing
 # jitter that is unrelated to the mutation property being verified.
@@ -155,7 +205,7 @@ def test_read_only_tools_never_mutate(req: WriteRequest, policy: Policy) -> None
     before = snapshot(gw._instance)
 
     changes = run(gw.preview_change(req))
-    decision = gw.policy_check(req)
+    decision = run(gw.policy_check(req))
 
     after = snapshot(gw._instance)
     assert before == after  # whole-instance state unchanged
@@ -179,7 +229,7 @@ def test_non_allow_guarded_write_does_not_mutate(req: WriteRequest, policy: Poli
     **Validates: Requirements 3.4, 7.2, 7.3, 7.4, 7.5, 8.5**
     """
     gw = make_gateway(fresh_mock(seeded=True), policy)
-    decision = gw.policy_check(req)
+    decision = run(gw.policy_check(req))
     before = snapshot(gw._instance)
 
     if policy.kill_switch_engaged:
@@ -332,8 +382,8 @@ def test_decision_identical_across_backends(req: WriteRequest, policy: Policy) -
     gw_a = make_gateway(fresh_mock(seeded=True), policy)
     gw_b = make_gateway(stub, policy)
 
-    decision_a = gw_a.policy_check(req)
-    decision_b = gw_b.policy_check(req)
+    decision_a = run(gw_a.policy_check(req))
+    decision_b = run(gw_b.policy_check(req))
     assert decision_a == decision_b
 
     def attempt(gw: Gateway) -> tuple[type[Exception] | None, Any]:

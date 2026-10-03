@@ -133,8 +133,8 @@ async def preview_change(request: WriteRequest) -> PreviewChangeResponse:
 
 @mcp.tool()
 async def policy_check(request: WriteRequest) -> PolicyCheckResponse:
-    """Evaluate policy for an intended write without applying it. Read-only, pure."""
-    decision = gateway.policy_check(request)
+    """Evaluate policy for an intended write without applying it. Read-only."""
+    decision = await gateway.policy_check(request)
     return PolicyCheckResponse(decision=decision)
 
 

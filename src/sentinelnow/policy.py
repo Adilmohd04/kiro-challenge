@@ -40,8 +40,20 @@ def risk_score(req: WriteRequest, policy: Policy) -> int:
     return max(0, min(score, 100))
 
 
-def evaluate_policy(req: WriteRequest, policy: Policy) -> Decision:
-    """Decide allow / needs_approval / deny for an intended write. Pure function."""
+def evaluate_policy(
+    req: WriteRequest,
+    policy: Policy,
+    current_priorities: list[str] | None = None,
+) -> Decision:
+    """Decide allow / needs_approval / deny for an intended write. Pure function.
+
+    ``current_priorities`` carries the CURRENT priority of each record the write
+    targets (read by the gateway via the async instance Protocol and passed in as
+    pure data — this function performs no I/O). The protected-priority rule fires
+    when EITHER a current priority OR the target priority in ``req.fields`` is in
+    ``policy.protected_priorities``, so an agent cannot downgrade or modify a
+    record that is currently a protected priority.
+    """
     score = risk_score(req, policy)
 
     if policy.kill_switch_engaged:
@@ -57,7 +69,11 @@ def evaluate_policy(req: WriteRequest, policy: Policy) -> Decision:
             risk_score=score,
         )
 
-    if req.fields.get("priority") in policy.protected_priorities:
+    candidate_priorities = set(current_priorities or [])
+    target_priority = req.fields.get("priority")
+    if target_priority is not None:
+        candidate_priorities.add(target_priority)
+    if candidate_priorities & set(policy.protected_priorities):
         return Decision(
             effect=Effect.NEEDS_APPROVAL,
             reason="Change touches a protected priority record",
