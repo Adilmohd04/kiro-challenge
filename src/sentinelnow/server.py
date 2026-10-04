@@ -40,7 +40,10 @@ from .errors import (
     PolicyDenied,
     SentinelNowError,
 )
+import os
+
 from .gateway import Gateway
+from .instance import ServiceNowClient, ServiceNowConfig
 from .mock_servicenow import MockServiceNow
 from .policy import Policy
 from .tool_models import (
@@ -72,13 +75,38 @@ def _load_dotenv() -> None:
     load_dotenv(override=False)
 
 
-def build_gateway() -> Gateway:
+ENV_MODE = "SENTINELNOW_MODE"
+
+
+def _build_mock_instance() -> MockServiceNow:
+    """In-memory ServiceNow with a couple of synthetic incidents for demos/tests."""
     instance = MockServiceNow()
-    # Seed a couple of synthetic incidents for demos/tests.
     instance.seed("incident", "INC0001", {"priority": "1", "state": "2"})
     instance.seed("incident", "INC0002", {"priority": "3", "state": "2"})
-    return Gateway(instance, Policy())
+    return instance
 
+
+def build_gateway() -> Gateway:
+    """Build the gateway. Defaults to the in-memory mock; uses a live ServiceNow
+    client only when ``SENTINELNOW_MODE=live``.
+
+    Mock is the safe default: an unset/empty/other mode value never touches a real
+    instance. In live mode, credentials come from the environment via
+    ``ServiceNowConfig.from_env()`` (SN_INSTANCE/SN_USER/SN_PASSWORD); a missing one
+    raises ``MissingCredential`` naming only the variable, never its value. The
+    gateway starts with safe default Policy guardrails (deletes denied, P1 protected,
+    batch limit) regardless of mode.
+    """
+    mode = os.environ.get(ENV_MODE, "mock").strip().lower()
+    if mode == "live":
+        config = ServiceNowConfig.from_env()
+        return Gateway(ServiceNowClient(config), Policy())
+    return Gateway(_build_mock_instance(), Policy())
+
+
+# Load a local .env (if present) BEFORE building the gateway, so SENTINELNOW_MODE
+# and the SN_* credentials are visible when build_gateway() reads the environment.
+_load_dotenv()
 
 # Module-level MCP server and a single shared gateway instance.
 mcp = FastMCP("sentinelnow")
@@ -192,7 +220,7 @@ async def kill_switch(action: KillSwitchAction, actor: str) -> KillSwitchRespons
 
 
 def main() -> None:
-    _load_dotenv()
+    # .env is already loaded at import time (see module-level _load_dotenv()).
     mcp.run()
 
 
