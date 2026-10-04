@@ -18,3 +18,7 @@ Thumbs.db
 
 # Workflow run artifacts (plans, reviews)
 .agents/
+
+# Personal/local MCP server config (machine-specific path, may hold live mode).
+# The committed template is mcp.sample.json.
+.kiro/settings/mcp.json
