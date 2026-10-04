@@ -132,21 +132,21 @@ logs never contain secret values or `WriteRequest.fields` contents.
 - [ ] 7. Checkpoint - gateway and audit behavior
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 8. Credential configuration (env-only)
-  - [ ] 8.1 Add `ServiceNowConfig` pydantic model
+- [x] 8. Credential configuration (env-only)
+  - [x] 8.1 Add `ServiceNowConfig` pydantic model
     - In a new `src/sentinelnow/config.py` (or `instance.py`), add `ServiceNowConfig` with `instance_url` (min_length 1), `user` (min_length 1), `password: SecretStr`, `timeout_seconds: float = Field(default=30.0, ge=1.0, le=60.0)`, and a `from_env()` classmethod reading `SN_INSTANCE`/`SN_USER`/`SN_PASSWORD`; missing/empty ⇒ raise `MissingCredential` naming the variable only (no value).
     - _Requirements: 10.1, 10.2, 10.3, 11.2; Design: Data Models > Credential config_
 
-  - [ ]* 8.2 Write unit tests for credential loading
+  - [x]* 8.2 Write unit tests for credential loading
     - In `tests/test_config.py`: env present ⇒ loads; each missing/empty var ⇒ `MissingCredential` naming the variable; assert `repr(config)` and `str(config.password)` never expose the secret value; assert timeout bounds (default 30, reject <1 and >60).
     - _Requirements: 10.1, 10.2, 10.3, 11.2_
 
-- [ ] 9. Real ServiceNow REST client
-  - [ ] 9.1 Implement async `ServiceNowClient` (httpx)
+- [x] 9. Real ServiceNow REST client
+  - [x] 9.1 Implement async `ServiceNowClient` (httpx)
     - In `src/sentinelnow/instance.py`, implement `ServiceNowClient` satisfying `ServiceNowInstance`: construct from `ServiceNowConfig`; `preview` does read-only GET(s) to build before/after; `apply` does POST/PATCH/DELETE on the Table API; enforce per-request `httpx.Timeout` from `timeout_seconds`; raise `InstanceUnreachable` on connect failure and `InstanceOperationFailed` on post-connect failure (no partial change). Reference credentials by env var name only in any log line.
     - _Requirements: 11.2, 11.4, 11.5; Design: Components and Interfaces > 1, Security Considerations_
 
-  - [ ]* 9.2 Write integration tests with `httpx.MockTransport`
+  - [x]* 9.2 Write integration tests with `httpx.MockTransport`
     - In `tests/test_servicenow_client.py` (example/integration tests, NOT property tests): 1–3 cases covering a successful preview via GET, connection failure ⇒ `InstanceUnreachable` with no mutation, and post-connect failure ⇒ `InstanceOperationFailed` with pre-operation state preserved.
     - _Requirements: 11.2, 11.4, 11.5_
 
