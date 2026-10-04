@@ -20,6 +20,25 @@ Runs **mock-first** against an in-memory ServiceNow so it works with no live ins
 Point it at a free Personal Developer Instance (PDI) later via `SN_INSTANCE` / `SN_USER`
 / `SN_PASSWORD` environment variables.
 
+### Configuration (.env)
+Credentials are read only from the environment. For local use, copy the template and
+fill in real values:
+
+```bash
+cp .env.example .env   # then edit .env
+```
+
+`.env` is gitignored and must never be committed. `SN_PASSWORD` is held as a pydantic
+`SecretStr` and is never logged, printed, or written to the audit log. If no `.env`
+exists (or you leave `SENTINELNOW_MODE=mock`), the gateway runs in mock mode.
+
+| Variable | Purpose |
+|----------|---------|
+| `SENTINELNOW_MODE` | `mock` (default, no instance) or `live` |
+| `SN_INSTANCE` | Instance base URL, e.g. `https://dev12345.service-now.com` |
+| `SN_USER` | Instance user with the needed Table API roles |
+| `SN_PASSWORD` | Password/token for `SN_USER` (secret — never commit) |
+
 ## Quickstart
 ```bash
 pip install -e ".[dev]"

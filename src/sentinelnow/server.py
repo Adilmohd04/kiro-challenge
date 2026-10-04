@@ -55,6 +55,23 @@ from .tool_models import (
 from .models import WriteRequest
 
 
+def _load_dotenv() -> None:
+    """Load variables from a local, gitignored ``.env`` if one is present.
+
+    Credentials come only from the environment (ServiceNowConfig.from_env); this
+    simply lets a developer keep ``SN_INSTANCE`` / ``SN_USER`` / ``SN_PASSWORD``
+    in a local ``.env`` instead of exporting them by hand. It is best-effort: if
+    python-dotenv is not installed or no ``.env`` exists, the real environment is
+    used unchanged. Secret values are never logged here.
+    """
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    # Do not override variables already set in the real environment.
+    load_dotenv(override=False)
+
+
 def build_gateway() -> Gateway:
     instance = MockServiceNow()
     # Seed a couple of synthetic incidents for demos/tests.
@@ -175,6 +192,7 @@ async def kill_switch(action: KillSwitchAction, actor: str) -> KillSwitchRespons
 
 
 def main() -> None:
+    _load_dotenv()
     mcp.run()
 
 
