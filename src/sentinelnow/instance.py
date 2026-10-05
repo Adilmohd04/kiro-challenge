@@ -53,6 +53,18 @@ class ServiceNowInstance(Protocol):
         """
         ...
 
+    async def search(
+        self, table: str, query: str, limit: int, fields: list[str] | None
+    ) -> list[dict[str, str]]:
+        """Search records matching ``query``. Read-only; MUST NOT mutate.
+
+        Returns up to ``limit`` matching records as field dicts. ``query`` uses
+        ServiceNow encoded-query syntax (``field=value`` clauses ANDed on ``^``);
+        an empty query matches all. When ``fields`` is provided the result is
+        projected to only those field names.
+        """
+        ...
+
     async def preview(self, req: WriteRequest) -> list[dict[str, str]]:
         """Return the before/after of what WOULD change. MUST NOT mutate. (Req 6.2)"""
         ...
@@ -208,6 +220,37 @@ class ServiceNowClient:
                 raise InstanceOperationFailed(f"GET {table}/{resolved} returned {resp.status_code}")
             result = resp.json().get("result", {})
             return {str(k): str(v) for k, v in result.items()}
+
+    async def search(
+        self, table: str, query: str, limit: int, fields: list[str] | None
+    ) -> list[dict[str, str]]:
+        """Search records matching ``query``. Read-only; never mutates.
+
+        Issues a single read-only GET to the table URL with the encoded query,
+        a hard-capped limit (at most 50), and an optional field projection. No
+        POST/PATCH/DELETE is ever issued.
+        """
+        params: dict[str, str] = {
+            "sysparm_query": query,
+            "sysparm_limit": str(min(max(limit, 1), 50)),
+        }
+        if fields:
+            params["sysparm_fields"] = ",".join(fields)
+        async with self._client() as client:
+            try:
+                resp = await client.get(self._table_url(table), params=params)
+            except httpx.ConnectError as exc:
+                raise InstanceUnreachable(
+                    f"could not connect to ServiceNow instance ({ENV_INSTANCE})"
+                ) from exc
+            except httpx.TransportError as exc:
+                raise InstanceOperationFailed(f"search {table} failed") from exc
+
+            if resp.is_error:
+                raise InstanceOperationFailed(f"search {table} returned {resp.status_code}")
+            return [
+                {str(k): str(v) for k, v in row.items()} for row in resp.json().get("result", [])
+            ]
 
     async def preview(self, req: WriteRequest) -> list[dict[str, str]]:
         """Return the before/after of what WOULD change. Read-only (Req 6.2).

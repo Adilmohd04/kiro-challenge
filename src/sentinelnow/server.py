@@ -1,7 +1,8 @@
 """MCP server entry point.
 
-Exposes the SentinelNow gateway as five MCP tools an AI agent can call over stdio:
+Exposes the SentinelNow gateway as MCP tools an AI agent can call over stdio:
   - preview_change  (read-only)
+  - search_records  (read-only lookup)
   - policy_check    (read-only; reads current record state to evaluate policy)
   - guarded_write   (the only mutating tool)
   - audit_log       (read-only)
@@ -54,6 +55,8 @@ from .tool_models import (
     PolicyCheckResponse,
     PreviewChangeResponse,
     RecordChange,
+    SearchRecordsRequest,
+    SearchRecordsResponse,
 )
 from .models import WriteRequest
 
@@ -172,6 +175,22 @@ async def preview_change(request: WriteRequest) -> PreviewChangeResponse:
     async def _run() -> PreviewChangeResponse:
         result = await gateway.preview_change(request)
         return PreviewChangeResponse(changes=[RecordChange(**d) for d in result])
+
+    return await _guard(_run)
+
+
+@mcp.tool()
+async def search_records(request: SearchRecordsRequest) -> SearchRecordsResponse:
+    """Look up records by encoded query. Read-only; never mutates.
+
+    Once a real ServiceNow client backs the gateway, this can raise
+    ``InstanceUnreachable`` / ``InstanceOperationFailed``; both are mapped to a
+    structured ToolError (no mutation occurs on either).
+    """
+
+    async def _run() -> SearchRecordsResponse:
+        records = await gateway.search_records(request)
+        return SearchRecordsResponse(records=records)
 
     return await _guard(_run)
 

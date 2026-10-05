@@ -83,3 +83,21 @@ class KillSwitchRequest(BaseModel):
 class KillSwitchResponse(BaseModel):
     engaged: bool
     audit_id: str
+
+
+class SearchRecordsRequest(BaseModel):
+    """Read-only record lookup. ``limit`` is bounded to [1, 50] at the boundary.
+
+    ``query`` uses ServiceNow encoded-query syntax (``field=value`` clauses ANDed
+    on ``^``); an empty query matches all records. ``fields`` optionally projects
+    the result to only the named field names.
+    """
+
+    table: str = Field(..., min_length=1)
+    query: str = ""
+    limit: int = Field(10, ge=1, le=50)
+    fields: list[str] | None = None
+
+
+class SearchRecordsResponse(BaseModel):
+    records: list[dict[str, str]]

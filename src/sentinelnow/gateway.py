@@ -9,6 +9,7 @@ from .errors import ApprovalRequired, KillSwitchEngaged, PolicyDenied
 from .instance import ServiceNowInstance
 from .models import Decision, Effect, WriteRequest, WriteResult
 from .policy import Policy, evaluate_policy
+from .tool_models import SearchRecordsRequest
 
 
 class Gateway:
@@ -38,6 +39,10 @@ class Gateway:
     # --- read-only, never mutates ---
     async def preview_change(self, req: WriteRequest) -> list[dict[str, str]]:
         return await self._instance.preview(req)
+
+    async def search_records(self, req: SearchRecordsRequest) -> list[dict[str, str]]:
+        """Read-only record lookup. Never mutates; unaudited (mirrors preview_change)."""
+        return await self._instance.search(req.table, req.query, req.limit, req.fields)
 
     async def policy_check(self, req: WriteRequest) -> Decision:
         current = await self._current_priorities(req)

@@ -26,6 +26,33 @@ class MockServiceNow:
         """Read a single record's current fields. Read-only; never mutates."""
         return self.get(table, sys_id)
 
+    async def search(
+        self, table: str, query: str, limit: int, fields: list[str] | None
+    ) -> list[dict[str, str]]:
+        """Search in-memory records matching ``query``. Read-only; never mutates.
+
+        An empty/whitespace query matches all records. Otherwise the query is
+        split on ``^`` into ``field=value`` clauses that are ANDed together: a
+        record matches only when ``record.get(field) == value`` for every clause.
+        The result is capped to at most 50 and projected to ``fields`` (keeping
+        only keys that exist) when ``fields`` is provided.
+        """
+        records = list(self._tables.get(table, {}).values())
+        if query.strip():
+            clauses = [clause for clause in query.split("^") if clause]
+            matched: list[dict[str, str]] = []
+            for record in records:
+                if all(
+                    "=" in clause and record.get(clause.split("=", 1)[0]) == clause.split("=", 1)[1]
+                    for clause in clauses
+                ):
+                    matched.append(record)
+            records = matched
+        capped = records[: min(max(limit, 1), 50)]
+        if fields:
+            return [{k: record[k] for k in fields if k in record} for record in capped]
+        return [dict(record) for record in capped]
+
     async def preview(self, req: WriteRequest) -> list[dict[str, str]]:
         """Return the before/after of what WOULD change. Never mutates."""
         changes: list[dict[str, str]] = []

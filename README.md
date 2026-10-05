@@ -10,6 +10,7 @@ write **previewable, risk-scored, policy-gated, auditable, and reversible via a 
 
 ## Core tools (exposed over MCP)
 - `preview_change` — dry-run; show what would change. Never mutates.
+- `search_records` — read-only lookup; find records by encoded query. Never mutates.
 - `policy_check` — risk-score an intended action -> allow / needs_approval / deny.
 - `guarded_write` — apply a change only if it passes policy.
 - `audit_log` — who / what / why / result for every action.

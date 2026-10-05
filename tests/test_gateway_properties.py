@@ -104,6 +104,26 @@ class StubServiceNowClient:
         """Read a single record's current fields. Read-only; never mutates."""
         return self.get(table, sys_id)
 
+    async def search(
+        self, table: str, query: str, limit: int, fields: list[str] | None
+    ) -> list[dict[str, str]]:
+        """Search in-memory records matching ``query``. Read-only; never mutates."""
+        records = list(self._tables.get(table, {}).values())
+        if query.strip():
+            clauses = [clause for clause in query.split("^") if clause]
+            matched: list[dict[str, str]] = []
+            for record in records:
+                if all(
+                    "=" in clause and record.get(clause.split("=", 1)[0]) == clause.split("=", 1)[1]
+                    for clause in clauses
+                ):
+                    matched.append(record)
+            records = matched
+        capped = records[: min(max(limit, 1), 50)]
+        if fields:
+            return [{k: record[k] for k in fields if k in record} for record in capped]
+        return [dict(record) for record in capped]
+
     async def preview(self, req: WriteRequest) -> list[dict[str, str]]:
         """Return before/after of what WOULD change. Never mutates (Req 6.2)."""
         changes: list[dict[str, str]] = []
