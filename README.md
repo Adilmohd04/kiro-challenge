@@ -1,32 +1,56 @@
 # SentinelNow
 
-An AI-agent safety gateway for ServiceNow.
+**An MCP server that puts a safety gateway in front of ServiceNow for any AI agent.**
 
-ServiceNow already lets AI agents (Claude, Codex, Copilot, Kiro) connect to an instance
-over MCP. The open problem in 2026 is **governance of what those agents actually do** —
-an over-permissioned agent can bulk-close incidents, corrupt the CMDB, or delete records
-with nobody watching. SentinelNow sits between the agent and ServiceNow and makes every
-write **previewable, risk-scored, policy-gated, auditable, and reversible via a kill switch.**
+ServiceNow increasingly lets AI agents act on an instance over the Model Context
+Protocol (MCP). The open problem is **governance of what those agents actually do** —
+an over-permissioned agent can bulk-close incidents, corrupt the CMDB, or delete
+records with nobody watching. SentinelNow sits between the agent and ServiceNow and
+makes every write **previewable, risk-scored, policy-gated, auditable, and reversible
+via a kill switch.**
 
-## Core tools (exposed over MCP)
-- `preview_change` — dry-run; show what would change. Never mutates.
-- `search_records` — read-only lookup; find records by encoded query. Never mutates.
-- `policy_check` — risk-score an intended action -> allow / needs_approval / deny.
-- `guarded_write` — apply a change only if it passes policy.
-- `audit_log` — who / what / why / result for every action.
-- `kill_switch` — instantly block all writes.
-- `list_pending_approvals` — read-only; list writes awaiting human approval.
-- `approve_request` — approve a pending write (audited; names the approver).
-- `reject_request` — reject a pending write (audited; names the approver).
+Because it speaks MCP over stdio, SentinelNow works with **any MCP client** — Claude
+(Desktop/Code), ChatGPT / OpenAI, GitHub Copilot, Gemini, Cursor, and Kiro — without
+any client-specific code. Point your agent at the SentinelNow server instead of
+directly at ServiceNow, and every write it attempts flows through the guardrails.
+
+## How it fits
+SentinelNow is a **per-action guardrail in front of an external AI agent**, not a
+replacement for ServiceNow's own controls. It is complementary to:
+
+- **ServiceNow ACLs** — row/field permissions decide what a credential *can* touch.
+  SentinelNow decides whether a specific *agent action* should proceed right now,
+  previews it, risk-scores it, can require human approval, and records it.
+- **ServiceNow AI Control Tower** — platform-side oversight of AI. SentinelNow is the
+  thin, portable gate the agent itself calls, usable from any MCP client and in mock
+  mode with no instance at all.
+
+In short: ACLs gate the credential, SentinelNow gates the *action*.
+
+## Tools (exposed over MCP)
+SentinelNow registers nine MCP tools. Only `guarded_write` and `kill_switch` ever
+change anything; everything else is read-only.
+
+| Tool | Mutates? | Purpose |
+|------|----------|---------|
+| `preview_change` | no | Dry-run; show the before/after of an intended write. |
+| `search_records` | no | Read-only lookup; find records by encoded query. |
+| `policy_check` | no | Risk-score an intended action -> allow / needs_approval / deny. |
+| `guarded_write` | **yes** | Apply a change only if it passes policy. The one mutating write tool. |
+| `audit_log` | no | Who / what / why / result for every action taken. |
+| `kill_switch` | state | Instantly block (or release) all writes; always audited. |
+| `list_pending_approvals` | no | List writes awaiting human approval (audit-safe summaries). |
+| `approve_request` | state | Approve a pending write (audited; names the approver). |
+| `reject_request` | state | Reject a pending write (audited; names the approver). |
 
 ## Status
-Runs **mock-first** against an in-memory ServiceNow so it works with no live instance.
-Point it at a free Personal Developer Instance (PDI) later via `SN_INSTANCE` / `SN_USER`
-/ `SN_PASSWORD` environment variables.
+Runs **mock-first** against an in-memory ServiceNow, so it works with no live instance.
+Point it at a free Personal Developer Instance (PDI) later via the `SN_*` environment
+variables and `SENTINELNOW_MODE=live`.
 
-### Configuration (.env)
-Credentials are read only from the environment. For local use, copy the template and
-fill in real values:
+## Configuration (environment)
+Credentials are read **only** from the environment. For local use, copy the template
+and fill in real values:
 
 ```bash
 cp .env.example .env   # then edit .env
@@ -44,6 +68,9 @@ exists (or you leave `SENTINELNOW_MODE=mock`), the gateway runs in mock mode.
 | `SN_PASSWORD` | Password/token for `SN_USER` (secret — never commit) |
 | `SENTINELNOW_AUDIT_DB` | Optional SQLite path for a persistent audit trail (unset = in-memory) |
 | `SENTINELNOW_POLICY` | Optional JSON/TOML policy file path (unset = safe defaults) |
+
+Every env var above is honored by `build_gateway()` at startup; absent the two
+`SENTINELNOW_*` store/config vars, the gateway behaves exactly as the in-memory default.
 
 ### Configurable policy file (`SENTINELNOW_POLICY`)
 By default the gateway uses the safe built-in guardrails (deletes denied, priority
@@ -86,7 +113,7 @@ A missing or malformed config (bad JSON/TOML, or a field of the wrong type) rais
 the typed `InvalidPolicyConfig`, naming the file and the offending field/section and
 never echoing a secret value.
 
-### Audit persistence (SQLite)
+### Audit persistence (`SENTINELNOW_AUDIT_DB`)
 By default the audit log is held **in memory** and resets when the process exits.
 Set `SENTINELNOW_AUDIT_DB` to a file path to persist the append-only audit trail to
 SQLite instead:
@@ -126,12 +153,36 @@ overrides an engaged kill switch or a hard policy deny (for example a disallowed
 `delete`); those still raise `kill_switch_engaged` / `policy_denied` and are never
 turned into a pending approval.
 
+## Audit dashboard (read-only)
+A small FastAPI app renders a live, **read-only** view of what agents have done:
+a timeline of actions with their effect and risk score, the current kill-switch
+status, and the list of writes awaiting approval.
+
+```bash
+python -m sentinelnow.dashboard   # serves on http://127.0.0.1:8787
+```
+
+It builds a gateway via the same `build_gateway()` as the MCP server, so it reflects
+the same policy and audit store (set `SENTINELNOW_AUDIT_DB` to view a persistent
+trail). The dashboard **never writes** — approving, rejecting, and the kill switch
+remain MCP-only; the dashboard only *displays* pending approvals. It exposes:
+
+- `GET /api/audit` — the audit entries (closed key set, no secrets).
+- `GET /api/pending` — pending approval summaries (display only).
+- `GET /api/killswitch` — `{"engaged": bool}`.
+- `GET /` — a single inline HTML page (no build step) that polls the three endpoints.
+
 ## Quickstart
 ```bash
 pip install -e ".[dev]"
-python -m pytest            # run tests (incl. property-based)
-python -m sentinelnow.server  # initialize the gateway (mock mode)
+python -m pytest                 # run tests (incl. property-based)
+python -m sentinelnow.server     # start the MCP server (mock mode)
+python -m sentinelnow.dashboard  # start the read-only audit dashboard
 ```
+
+Register the server with your MCP client (for example in Claude Desktop's
+`claude_desktop_config.json`, or any client's MCP settings) by running
+`python -m sentinelnow.server` over stdio.
 
 ## Kiro University Challenge — lesson map
 - **L1 Specs** -> `.kiro/specs/sentinelnow/` (done in a Spec session)

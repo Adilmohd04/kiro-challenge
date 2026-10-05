@@ -132,6 +132,14 @@ class Gateway:
         self._audit.record_event(approver, "reject", approval_id)
         return approval
 
+    def kill_switch_engaged(self) -> bool:
+        """Return whether the kill switch is currently engaged. Read-only.
+
+        A public accessor so read-only consumers (e.g. the audit dashboard) can
+        report the kill-switch state without reaching into the private policy.
+        """
+        return self._policy.kill_switch_engaged
+
     def engage_kill_switch(self, actor: str) -> AuditEntry:
         self._policy.kill_switch_engaged = True
         return self._audit.record_event(actor, "engage", "engaged")
