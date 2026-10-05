@@ -4,6 +4,9 @@ tools call. Pure decision logic lives in policy.py; this orchestrates I/O.
 
 from __future__ import annotations
 
+import time
+from collections import deque
+
 from .approvals import ApprovalRequest, ApprovalStore, fingerprint_request
 from .audit import AuditEntry, AuditLog, AuditStore
 from .errors import ApprovalRequired, InvalidRequest, KillSwitchEngaged, PolicyDenied
@@ -24,6 +27,26 @@ class Gateway:
         self._policy = policy
         self._audit: AuditStore = audit if audit is not None else AuditLog()
         self._approvals = ApprovalStore()
+        # Per-agent applied-write timestamps (epoch seconds), trimmed to the
+        # trailing 60s. Pure in-memory bookkeeping — all timing stays in the
+        # gateway so evaluate_policy receives only a plain count.
+        self._write_times: dict[str, deque[float]] = {}
+
+    _RATE_WINDOW_SECONDS: float = 60.0
+
+    def _recent_write_count(self, agent_id: str, now: float) -> int:
+        """Count writes this agent applied in the trailing 60s, trimming old ones."""
+        times = self._write_times.get(agent_id)
+        if times is None:
+            return 0
+        cutoff = now - self._RATE_WINDOW_SECONDS
+        while times and times[0] < cutoff:
+            times.popleft()
+        return len(times)
+
+    def _record_write_time(self, agent_id: str, now: float) -> None:
+        """Append a timestamp for an actually-applied write by this agent."""
+        self._write_times.setdefault(agent_id, deque()).append(now)
 
     async def _current_priorities(self, req: WriteRequest) -> list[str]:
         """Read the CURRENT priority of each targeted record. Read-only.
@@ -53,12 +76,15 @@ class Gateway:
 
     async def policy_check(self, req: WriteRequest) -> Decision:
         current = await self._current_priorities(req)
-        return evaluate_policy(req, self._policy, current)
+        recent = self._recent_write_count(req.agent_id, time.monotonic())
+        return evaluate_policy(req, self._policy, current, recent_write_count=recent)
 
     # --- the only path that mutates ---
     async def guarded_write(self, req: WriteRequest) -> WriteResult:
         current = await self._current_priorities(req)
-        decision = evaluate_policy(req, self._policy, current)
+        now = time.monotonic()
+        recent = self._recent_write_count(req.agent_id, now)
+        decision = evaluate_policy(req, self._policy, current, recent_write_count=recent)
 
         # Precedence is explicit and ordered: kill switch > deny > approval.
         # (1)+(2): a DENY always wins. An engaged kill switch produces a DENY
@@ -79,6 +105,7 @@ class Gateway:
 
         # (4) ALLOW (or an approved NEEDS_APPROVAL) -> apply.
         await self._instance.apply(req)
+        self._record_write_time(req.agent_id, now)
         entry = self._audit.record(req, decision, applied=True)
         return WriteResult(applied=True, decision=decision, audit_id=entry.audit_id)
 

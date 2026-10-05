@@ -43,6 +43,48 @@ exists (or you leave `SENTINELNOW_MODE=mock`), the gateway runs in mock mode.
 | `SN_USER` | Instance user with the needed Table API roles |
 | `SN_PASSWORD` | Password/token for `SN_USER` (secret — never commit) |
 | `SENTINELNOW_AUDIT_DB` | Optional SQLite path for a persistent audit trail (unset = in-memory) |
+| `SENTINELNOW_POLICY` | Optional JSON/TOML policy file path (unset = safe defaults) |
+
+### Configurable policy file (`SENTINELNOW_POLICY`)
+By default the gateway uses the safe built-in guardrails (deletes denied, priority
+`1` protected, batch limit of 10). Set `SENTINELNOW_POLICY` to a `.json` or `.toml`
+file to override them. When the variable is unset the behavior is exactly as before.
+
+```bash
+export SENTINELNOW_POLICY=./sentinelnow-policy.toml
+```
+
+The file is parsed and validated **at the boundary** (`policy_config.py`); the pure
+`evaluate_policy` only ever receives a `Policy` object and plain counts, so no I/O
+leaks into the decision logic. Configurable fields:
+
+- `max_batch_size`, `allow_delete`, `protected_priorities` — the base guardrails.
+- `table_overrides` — per-table rules that override the base fields for one table
+  only. Each override may set any of `max_batch_size`, `allow_delete`, or
+  `protected_priorities`; omitted fields fall back to the base policy, and tables
+  with no override keep the base rules.
+- `max_writes_per_minute` — a per-agent rate limit. When an agent has already
+  applied this many writes in the trailing minute, further writes return
+  `needs_approval` (not a hard deny) so a human can authorize a legitimate burst.
+  The rate limit is evaluated **after** the kill switch and hard-deny checks, so the
+  precedence stays: kill switch > deny > rate-limit approval.
+
+Example TOML:
+
+```toml
+max_batch_size = 10
+allow_delete = false
+protected_priorities = ["1"]
+max_writes_per_minute = 30
+
+[table_overrides.incident]
+allow_delete = true
+protected_priorities = ["1", "2"]
+```
+
+A missing or malformed config (bad JSON/TOML, or a field of the wrong type) raises
+the typed `InvalidPolicyConfig`, naming the file and the offending field/section and
+never echoing a secret value.
 
 ### Audit persistence (SQLite)
 By default the audit log is held **in memory** and resets when the process exits.

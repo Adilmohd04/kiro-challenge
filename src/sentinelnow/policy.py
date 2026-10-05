@@ -11,6 +11,18 @@ from pydantic import BaseModel
 from .models import Decision, Effect, Operation, WriteRequest
 
 
+class TableRule(BaseModel):
+    """Optional per-table overrides for the base guardrails.
+
+    Each field is optional; a ``None`` means "fall back to the base Policy value".
+    Only the fields that gate deny/approval decisions are overridable here.
+    """
+
+    max_batch_size: int | None = None
+    allow_delete: bool | None = None
+    protected_priorities: list[str] | None = None
+
+
 class Policy(BaseModel):
     """Configurable guardrails. Safe defaults: deny destructive/bulk unless allowed."""
 
@@ -18,6 +30,10 @@ class Policy(BaseModel):
     allow_delete: bool = False
     protected_priorities: list[str] = ["1"]  # e.g. P1 incidents
     kill_switch_engaged: bool = False
+    # Optional per-table overrides keyed by table name; absent tables use base rules.
+    table_overrides: dict[str, TableRule] = {}
+    # Optional per-agent rate limit (writes per trailing minute). None = unlimited.
+    max_writes_per_minute: int | None = None
 
 
 # Risk weights per operation (0-100 scale is clamped at the end).
@@ -44,6 +60,8 @@ def evaluate_policy(
     req: WriteRequest,
     policy: Policy,
     current_priorities: list[str] | None = None,
+    *,
+    recent_write_count: int = 0,
 ) -> Decision:
     """Decide allow / needs_approval / deny for an intended write. Pure function.
 
@@ -51,21 +69,58 @@ def evaluate_policy(
     targets (read by the gateway via the async instance Protocol and passed in as
     pure data — this function performs no I/O). The protected-priority rule fires
     when EITHER a current priority OR the target priority in ``req.fields`` is in
-    ``policy.protected_priorities``, so an agent cannot downgrade or modify a
-    record that is currently a protected priority.
+    the EFFECTIVE ``protected_priorities``, so an agent cannot downgrade or modify
+    a record that is currently a protected priority.
+
+    The EFFECTIVE rule for the request's table is the base Policy with any matching
+    entry in ``policy.table_overrides`` overlaid: a non-``None`` override field wins,
+    otherwise the base value is used. This lets, e.g., one table allow deletes while
+    the rest stay locked down.
+
+    ``recent_write_count`` is the number of writes the requesting agent has applied
+    in the trailing minute, counted by the gateway and passed in as pure data. When
+    ``policy.max_writes_per_minute`` is set and the count has reached it, the write
+    maps to NEEDS_APPROVAL (not a hard DENY) so a human can authorize a legitimate
+    burst. This is checked AFTER the kill switch and hard-deny rules, preserving the
+    precedence: kill switch > deny > rate-limit approval.
     """
     score = risk_score(req, policy)
+
+    override = policy.table_overrides.get(req.table)
+    eff_max_batch_size = policy.max_batch_size
+    eff_allow_delete = policy.allow_delete
+    eff_protected_priorities = policy.protected_priorities
+    if override is not None:
+        if override.max_batch_size is not None:
+            eff_max_batch_size = override.max_batch_size
+        if override.allow_delete is not None:
+            eff_allow_delete = override.allow_delete
+        if override.protected_priorities is not None:
+            eff_protected_priorities = override.protected_priorities
 
     if policy.kill_switch_engaged:
         return Decision(effect=Effect.DENY, reason="Kill switch engaged", risk_score=score)
 
-    if req.operation is Operation.DELETE and not policy.allow_delete:
+    if req.operation is Operation.DELETE and not eff_allow_delete:
         return Decision(effect=Effect.DENY, reason="Deletes are not allowed", risk_score=score)
 
-    if req.batch_size > policy.max_batch_size:
+    if req.batch_size > eff_max_batch_size:
         return Decision(
             effect=Effect.DENY,
-            reason=f"Batch size {req.batch_size} exceeds limit {policy.max_batch_size}",
+            reason=f"Batch size {req.batch_size} exceeds limit {eff_max_batch_size}",
+            risk_score=score,
+        )
+
+    if (
+        policy.max_writes_per_minute is not None
+        and recent_write_count >= policy.max_writes_per_minute
+    ):
+        return Decision(
+            effect=Effect.NEEDS_APPROVAL,
+            reason=(
+                f"Rate limit reached: {recent_write_count} writes in the last minute "
+                f"meets the limit of {policy.max_writes_per_minute}"
+            ),
             risk_score=score,
         )
 
@@ -73,7 +128,7 @@ def evaluate_policy(
     target_priority = req.fields.get("priority")
     if target_priority is not None:
         candidate_priorities.add(target_priority)
-    if candidate_priorities & set(policy.protected_priorities):
+    if candidate_priorities & set(eff_protected_priorities):
         return Decision(
             effect=Effect.NEEDS_APPROVAL,
             reason="Change touches a protected priority record",

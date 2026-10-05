@@ -48,7 +48,7 @@ from .audit_store import SqliteAuditStore
 from .gateway import Gateway
 from .instance import ServiceNowClient, ServiceNowConfig
 from .mock_servicenow import MockServiceNow
-from .policy import Policy
+from .policy_config import load_policy
 from .tool_models import (
     ApprovalActionResponse,
     AuditLogResponse,
@@ -84,6 +84,7 @@ def _load_dotenv() -> None:
 
 ENV_MODE = "SENTINELNOW_MODE"
 ENV_AUDIT_DB = "SENTINELNOW_AUDIT_DB"
+ENV_POLICY = "SENTINELNOW_POLICY"
 
 
 def _build_mock_instance() -> MockServiceNow:
@@ -102,15 +103,18 @@ def build_gateway() -> Gateway:
     instance. In live mode, credentials come from the environment via
     ``ServiceNowConfig.from_env()`` (SN_INSTANCE/SN_USER/SN_PASSWORD); a missing one
     raises ``MissingCredential`` naming only the variable, never its value. The
-    gateway starts with safe default Policy guardrails (deletes denied, P1 protected,
-    batch limit) regardless of mode.
+    gateway loads its Policy via ``load_policy(SENTINELNOW_POLICY)``: an unset var
+    keeps today's safe default guardrails (deletes denied, P1 protected, batch
+    limit); a path points at a JSON/TOML policy file. A malformed file raises the
+    typed ``InvalidPolicyConfig`` naming the problem (never a secret).
     """
     audit = _build_audit_store()
+    policy = load_policy(os.environ.get(ENV_POLICY))
     mode = os.environ.get(ENV_MODE, "mock").strip().lower()
     if mode == "live":
         config = ServiceNowConfig.from_env()
-        return Gateway(ServiceNowClient(config), Policy(), audit)
-    return Gateway(_build_mock_instance(), Policy(), audit)
+        return Gateway(ServiceNowClient(config), policy, audit)
+    return Gateway(_build_mock_instance(), policy, audit)
 
 
 def _build_audit_store() -> AuditStore | None:

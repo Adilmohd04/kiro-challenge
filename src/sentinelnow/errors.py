@@ -25,6 +25,14 @@ class InvalidRequest(SentinelNowError):
     """
 
 
+class InvalidPolicyConfig(SentinelNowError):
+    """Raised when a policy config file is missing or malformed.
+
+    The message names the offending file path and field/section so the operator
+    can fix it; it never embeds a secret value.
+    """
+
+
 class MissingCredential(SentinelNowError):
     """Raised when a required ServiceNow credential env var is missing or empty.
 
