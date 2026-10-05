@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
+from typing import Protocol, runtime_checkable
 
 from pydantic import BaseModel
 
@@ -27,53 +28,83 @@ class AuditEntry(BaseModel):
     applied: bool
 
 
+def build_entry(req: WriteRequest, decision: Decision, applied: bool) -> AuditEntry:
+    """Construct the :class:`AuditEntry` for a record write.
+
+    This is the single place the closed key set is assembled for record writes, so
+    every store (in-memory and SQLite) builds identical entries and cannot drift.
+    Only safe fields are read from ``req`` — never ``req.fields`` or any secret.
+    """
+    return AuditEntry(
+        audit_id=str(uuid.uuid4()),
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        agent_id=req.agent_id,
+        table=req.table,
+        operation=req.operation.value,
+        record_ids=req.record_ids,
+        reason=req.reason,
+        effect=decision.effect.value,
+        risk_score=decision.risk_score,
+        applied=applied,
+    )
+
+
+def build_event_entry(actor: str, action: str, result: str) -> AuditEntry:
+    """Construct the :class:`AuditEntry` for a non-record gateway event.
+
+    Reuses the closed AuditEntry key set so the audit log stays uniform and
+    append-only (Req 9.1). ``actor`` is the invoking identity (who), ``action``
+    is the event (what, e.g. "engage"/"release"), and ``result`` the outcome.
+    A sentinel ``table`` marks this as a gateway event rather than a record
+    write; ``record_ids`` is empty and no secret/credential value is included.
+
+    The effect is mapped from the action to a valid :class:`Effect` value:
+    engaging the kill switch moves the gateway to a deny-all posture
+    (``Effect.DENY``), releasing it restores the allow posture
+    (``Effect.ALLOW``).
+    """
+    effect = Effect.DENY if action == "engage" else Effect.ALLOW
+    return AuditEntry(
+        audit_id=str(uuid.uuid4()),
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        agent_id=actor,
+        table="__killswitch__",
+        operation=action,
+        record_ids=[],
+        reason=f"kill switch {action}: {result}",
+        effect=effect.value,
+        risk_score=0,
+        applied=True,
+    )
+
+
+@runtime_checkable
+class AuditStore(Protocol):
+    """Structural interface every audit store satisfies.
+
+    Both the in-memory :class:`AuditLog` and the SQLite-backed store implement
+    this, so the gateway can be backed by either without any behavior change.
+    """
+
+    def record(self, req: WriteRequest, decision: Decision, applied: bool) -> AuditEntry: ...
+
+    def record_event(self, actor: str, action: str, result: str) -> AuditEntry: ...
+
+    def all(self) -> list[AuditEntry]: ...
+
+
 class AuditLog:
     def __init__(self) -> None:
         self._entries: list[AuditEntry] = []
 
     def record(self, req: WriteRequest, decision: Decision, applied: bool) -> AuditEntry:
-        entry = AuditEntry(
-            audit_id=str(uuid.uuid4()),
-            timestamp=datetime.now(timezone.utc).isoformat(),
-            agent_id=req.agent_id,
-            table=req.table,
-            operation=req.operation.value,
-            record_ids=req.record_ids,
-            reason=req.reason,
-            effect=decision.effect.value,
-            risk_score=decision.risk_score,
-            applied=applied,
-        )
+        entry = build_entry(req, decision, applied)
         self._entries.append(entry)
         return entry
 
     def record_event(self, actor: str, action: str, result: str) -> AuditEntry:
-        """Record a non-record gateway event (e.g. kill-switch engage/release).
-
-        Reuses the closed AuditEntry key set so the audit log stays uniform and
-        append-only (Req 9.1). ``actor`` is the invoking identity (who), ``action``
-        is the event (what, e.g. "engage"/"release"), and ``result`` the outcome.
-        A sentinel ``table`` marks this as a gateway event rather than a record
-        write; ``record_ids`` is empty and no secret/credential value is included.
-
-        The effect is mapped from the action to a valid :class:`Effect` value:
-        engaging the kill switch moves the gateway to a deny-all posture
-        (``Effect.DENY``), releasing it restores the allow posture
-        (``Effect.ALLOW``).
-        """
-        effect = Effect.DENY if action == "engage" else Effect.ALLOW
-        entry = AuditEntry(
-            audit_id=str(uuid.uuid4()),
-            timestamp=datetime.now(timezone.utc).isoformat(),
-            agent_id=actor,
-            table="__killswitch__",
-            operation=action,
-            record_ids=[],
-            reason=f"kill switch {action}: {result}",
-            effect=effect.value,
-            risk_score=0,
-            applied=True,
-        )
+        """Record a non-record gateway event (e.g. kill-switch engage/release)."""
+        entry = build_event_entry(actor, action, result)
         self._entries.append(entry)
         return entry
 

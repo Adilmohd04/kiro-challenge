@@ -39,6 +39,23 @@ exists (or you leave `SENTINELNOW_MODE=mock`), the gateway runs in mock mode.
 | `SN_INSTANCE` | Instance base URL, e.g. `https://dev12345.service-now.com` |
 | `SN_USER` | Instance user with the needed Table API roles |
 | `SN_PASSWORD` | Password/token for `SN_USER` (secret — never commit) |
+| `SENTINELNOW_AUDIT_DB` | Optional SQLite path for a persistent audit trail (unset = in-memory) |
+
+### Audit persistence (SQLite)
+By default the audit log is held **in memory** and resets when the process exits.
+Set `SENTINELNOW_AUDIT_DB` to a file path to persist the append-only audit trail to
+SQLite instead:
+
+```bash
+export SENTINELNOW_AUDIT_DB=./sentinelnow-audit.db
+```
+
+The store records **exactly** the closed audit key set (`audit_id`, `timestamp`,
+`agent_id`, `table`, `operation`, `record_ids`, `reason`, `effect`, `risk_score`,
+`applied`). It never persists `WriteRequest.fields` contents or any secret/credential
+value. It is append-only and survives restarts: reopening the same path replays the
+full history. When the variable is unset or empty the gateway behaves exactly as
+before, using the in-memory store.
 
 ## Quickstart
 ```bash

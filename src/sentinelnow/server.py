@@ -43,6 +43,8 @@ from .errors import (
 )
 import os
 
+from .audit import AuditStore
+from .audit_store import SqliteAuditStore
 from .gateway import Gateway
 from .instance import ServiceNowClient, ServiceNowConfig
 from .mock_servicenow import MockServiceNow
@@ -79,6 +81,7 @@ def _load_dotenv() -> None:
 
 
 ENV_MODE = "SENTINELNOW_MODE"
+ENV_AUDIT_DB = "SENTINELNOW_AUDIT_DB"
 
 
 def _build_mock_instance() -> MockServiceNow:
@@ -100,11 +103,26 @@ def build_gateway() -> Gateway:
     gateway starts with safe default Policy guardrails (deletes denied, P1 protected,
     batch limit) regardless of mode.
     """
+    audit = _build_audit_store()
     mode = os.environ.get(ENV_MODE, "mock").strip().lower()
     if mode == "live":
         config = ServiceNowConfig.from_env()
-        return Gateway(ServiceNowClient(config), Policy())
-    return Gateway(_build_mock_instance(), Policy())
+        return Gateway(ServiceNowClient(config), Policy(), audit)
+    return Gateway(_build_mock_instance(), Policy(), audit)
+
+
+def _build_audit_store() -> AuditStore | None:
+    """Select the audit store from the environment.
+
+    When ``SENTINELNOW_AUDIT_DB`` is set and non-empty, persist the audit trail to
+    that SQLite path; otherwise return ``None`` so the gateway uses its in-memory
+    default and behaves exactly as before. The path is not a secret and is not
+    logged here; credentials are never involved.
+    """
+    db_path = os.environ.get(ENV_AUDIT_DB, "").strip()
+    if db_path:
+        return SqliteAuditStore(db_path)
+    return None
 
 
 # Load a local .env (if present) BEFORE building the gateway, so SENTINELNOW_MODE

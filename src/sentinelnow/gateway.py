@@ -4,7 +4,7 @@ tools call. Pure decision logic lives in policy.py; this orchestrates I/O.
 
 from __future__ import annotations
 
-from .audit import AuditEntry, AuditLog
+from .audit import AuditEntry, AuditLog, AuditStore
 from .errors import ApprovalRequired, KillSwitchEngaged, PolicyDenied
 from .instance import ServiceNowInstance
 from .models import Decision, Effect, WriteRequest, WriteResult
@@ -13,10 +13,15 @@ from .tool_models import SearchRecordsRequest
 
 
 class Gateway:
-    def __init__(self, instance: ServiceNowInstance, policy: Policy) -> None:
+    def __init__(
+        self,
+        instance: ServiceNowInstance,
+        policy: Policy,
+        audit: AuditStore | None = None,
+    ) -> None:
         self._instance = instance
         self._policy = policy
-        self._audit = AuditLog()
+        self._audit: AuditStore = audit if audit is not None else AuditLog()
 
     async def _current_priorities(self, req: WriteRequest) -> list[str]:
         """Read the CURRENT priority of each targeted record. Read-only.
