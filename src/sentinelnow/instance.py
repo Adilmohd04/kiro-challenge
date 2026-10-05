@@ -26,6 +26,19 @@ ENV_INSTANCE = "SN_INSTANCE"
 ENV_USER = "SN_USER"
 ENV_PASSWORD = "SN_PASSWORD"
 
+# Characters that make up a lowercase-hex ServiceNow sys_id.
+_SYS_ID_CHARS = frozenset("0123456789abcdef")
+
+
+def is_sys_id(identifier: str) -> bool:
+    """Return True iff ``identifier`` is a 32-char lowercase-hex sys_id.
+
+    Pure classifier — no I/O, no exceptions. Agents naturally pass display
+    numbers (e.g. ``INC0000060``); those are NOT sys_ids and must be resolved.
+    An uppercase-hex string of length 32 is NOT a sys_id either.
+    """
+    return len(identifier) == 32 and all(c in _SYS_ID_CHARS for c in identifier)
+
 
 @runtime_checkable
 class ServiceNowInstance(Protocol):
@@ -138,6 +151,40 @@ class ServiceNowClient:
     def _table_url(table: str) -> str:
         return f"/api/now/table/{table}"
 
+    async def _resolve_sys_id(self, client: httpx.AsyncClient, table: str, identifier: str) -> str:
+        """Resolve a display number (e.g. ``INC0000060``) to its sys_id.
+
+        If ``identifier`` is already a sys_id (:func:`is_sys_id`), return it
+        unchanged with no network call. Otherwise issue a single read-only GET
+        querying ``number=<identifier>`` and return the matched record's sys_id.
+        Never mutates. The not-found message names the table and number only —
+        never any field value (security steering).
+        """
+        if is_sys_id(identifier):
+            return identifier
+        try:
+            resp = await client.get(
+                self._table_url(table),
+                params={
+                    "sysparm_query": f"number={identifier}",
+                    "sysparm_fields": "sys_id",
+                    "sysparm_limit": "1",
+                },
+            )
+        except httpx.ConnectError as exc:
+            raise InstanceUnreachable(
+                f"could not connect to ServiceNow instance ({ENV_INSTANCE})"
+            ) from exc
+        except httpx.TransportError as exc:
+            raise InstanceOperationFailed(f"resolve {table} number failed") from exc
+
+        if resp.is_error:
+            raise InstanceOperationFailed(f"resolve {table} number returned {resp.status_code}")
+        result = resp.json().get("result", [])
+        if not result:
+            raise InstanceOperationFailed(f"no {table} record found for number {identifier}")
+        return str(result[0]["sys_id"])
+
     async def get_record(self, table: str, sys_id: str) -> dict[str, str] | None:
         """Read a single record's current fields. Read-only; never mutates.
 
@@ -145,19 +192,20 @@ class ServiceNowClient:
         (HTTP 404). Any other failure is surfaced as a typed error.
         """
         async with self._client() as client:
+            resolved = await self._resolve_sys_id(client, table, sys_id)
             try:
-                resp = await client.get(self._record_url(table, sys_id))
+                resp = await client.get(self._record_url(table, resolved))
             except httpx.ConnectError as exc:
                 raise InstanceUnreachable(
                     f"could not connect to ServiceNow instance ({ENV_INSTANCE})"
                 ) from exc
             except httpx.TransportError as exc:
-                raise InstanceOperationFailed(f"GET {table}/{sys_id} failed") from exc
+                raise InstanceOperationFailed(f"GET {table}/{resolved} failed") from exc
 
             if resp.status_code == 404:
                 return None
             if resp.is_error:
-                raise InstanceOperationFailed(f"GET {table}/{sys_id} returned {resp.status_code}")
+                raise InstanceOperationFailed(f"GET {table}/{resolved} returned {resp.status_code}")
             result = resp.json().get("result", {})
             return {str(k): str(v) for k, v in result.items()}
 
@@ -172,18 +220,19 @@ class ServiceNowClient:
             for sys_id in req.record_ids or ["<new>"]:
                 before: dict[str, str] = {}
                 if sys_id != "<new>":
+                    resolved = await self._resolve_sys_id(client, req.table, sys_id)
                     try:
-                        resp = await client.get(self._record_url(req.table, sys_id))
+                        resp = await client.get(self._record_url(req.table, resolved))
                     except httpx.ConnectError as exc:
                         raise InstanceUnreachable(
                             f"could not connect to ServiceNow instance ({ENV_INSTANCE})"
                         ) from exc
                     except httpx.TransportError as exc:
-                        raise InstanceOperationFailed(f"GET {req.table}/{sys_id} failed") from exc
+                        raise InstanceOperationFailed(f"GET {req.table}/{resolved} failed") from exc
                     if resp.status_code != 404:
                         if resp.is_error:
                             raise InstanceOperationFailed(
-                                f"GET {req.table}/{sys_id} returned {resp.status_code}"
+                                f"GET {req.table}/{resolved} returned {resp.status_code}"
                             )
                         result = resp.json().get("result", {})
                         before = {str(k): str(v) for k, v in result.items()}
@@ -207,12 +256,13 @@ class ServiceNowClient:
         async with self._client() as client:
             if req.operation is Operation.DELETE:
                 for sys_id in req.record_ids:
-                    resp = await self._send(client, "DELETE", self._record_url(req.table, sys_id))
+                    resolved = await self._resolve_sys_id(client, req.table, sys_id)
+                    resp = await self._send(client, "DELETE", self._record_url(req.table, resolved))
                     if resp.status_code == 404:
                         continue
                     if resp.is_error:
                         raise InstanceOperationFailed(
-                            f"DELETE {req.table}/{sys_id} returned {resp.status_code}"
+                            f"DELETE {req.table}/{resolved} returned {resp.status_code}"
                         )
                     affected += 1
                 return affected
@@ -224,12 +274,13 @@ class ServiceNowClient:
                 return 1
 
             for sys_id in req.record_ids:
+                resolved = await self._resolve_sys_id(client, req.table, sys_id)
                 resp = await self._send(
-                    client, "PATCH", self._record_url(req.table, sys_id), json=req.fields
+                    client, "PATCH", self._record_url(req.table, resolved), json=req.fields
                 )
                 if resp.is_error:
                     raise InstanceOperationFailed(
-                        f"PATCH {req.table}/{sys_id} returned {resp.status_code}"
+                        f"PATCH {req.table}/{resolved} returned {resp.status_code}"
                     )
                 affected += 1
         return affected
