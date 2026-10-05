@@ -14,6 +14,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
+from .approvals import ApprovalRequest
 from .audit import AuditEntry
 from .models import Decision, WriteRequest, WriteResult
 
@@ -101,3 +102,27 @@ class SearchRecordsRequest(BaseModel):
 
 class SearchRecordsResponse(BaseModel):
     records: list[dict[str, str]]
+
+
+class ListPendingApprovalsResponse(BaseModel):
+    """Every write currently awaiting human approval (audit-safe summaries)."""
+
+    approvals: list[ApprovalRequest]
+
+
+class ApproveRequest(BaseModel):
+    """Approve a pending request. ``approver`` names who authorized it (audited)."""
+
+    approval_id: str = Field(..., min_length=1)
+    approver: str = Field(..., min_length=1)
+
+
+class RejectRequest(BaseModel):
+    """Reject a pending request. ``approver`` names who rejected it (audited)."""
+
+    approval_id: str = Field(..., min_length=1)
+    approver: str = Field(..., min_length=1)
+
+
+class ApprovalActionResponse(BaseModel):
+    approval: ApprovalRequest

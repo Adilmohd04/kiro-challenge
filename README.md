@@ -15,6 +15,9 @@ write **previewable, risk-scored, policy-gated, auditable, and reversible via a 
 - `guarded_write` — apply a change only if it passes policy.
 - `audit_log` — who / what / why / result for every action.
 - `kill_switch` — instantly block all writes.
+- `list_pending_approvals` — read-only; list writes awaiting human approval.
+- `approve_request` — approve a pending write (audited; names the approver).
+- `reject_request` — reject a pending write (audited; names the approver).
 
 ## Status
 Runs **mock-first** against an in-memory ServiceNow so it works with no live instance.
@@ -56,6 +59,30 @@ The store records **exactly** the closed audit key set (`audit_id`, `timestamp`,
 value. It is append-only and survives restarts: reopening the same path replays the
 full history. When the variable is unset or empty the gateway behaves exactly as
 before, using the in-memory store.
+
+### Approval workflow (human-in-the-loop)
+When `policy_check` returns `needs_approval`, `guarded_write` does not silently fail:
+it records a **pending** approval request and raises `approval_required` without
+touching the instance. Each pending request is an **audit-safe summary** — IDs,
+operation, reason, and risk score only. It never carries `WriteRequest.fields`
+values or any secret.
+
+An operator reviews and resolves it over MCP:
+
+- `list_pending_approvals` returns the pending summaries (read-only).
+- `approve_request(approval_id, approver)` approves it. A subsequent **identical**
+  `guarded_write` (same agent, table, operation, records, reason, and field
+  values) then applies — approval bypasses **only** the approval gate.
+- `reject_request(approval_id, approver)` keeps the write blocked.
+
+Every approve and reject appends an audit entry naming the approver. An approval
+is bound to the exact request via a secret-free SHA-256 fingerprint, so a changed
+field value needs a fresh approval.
+
+**Precedence is strict: kill switch > deny > approval.** An approved request never
+overrides an engaged kill switch or a hard policy deny (for example a disallowed
+`delete`); those still raise `kill_switch_engaged` / `policy_denied` and are never
+turned into a pending approval.
 
 ## Quickstart
 ```bash

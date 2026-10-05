@@ -50,10 +50,12 @@ from .instance import ServiceNowClient, ServiceNowConfig
 from .mock_servicenow import MockServiceNow
 from .policy import Policy
 from .tool_models import (
+    ApprovalActionResponse,
     AuditLogResponse,
     GuardedWriteResponse,
     KillSwitchAction,
     KillSwitchResponse,
+    ListPendingApprovalsResponse,
     PolicyCheckResponse,
     PreviewChangeResponse,
     RecordChange,
@@ -234,6 +236,51 @@ async def guarded_write(request: WriteRequest) -> GuardedWriteResponse:
     async def _run() -> GuardedWriteResponse:
         result = await gateway.guarded_write(request)
         return GuardedWriteResponse(result=result)
+
+    return await _guard(_run)
+
+
+@mcp.tool()
+async def list_pending_approvals() -> ListPendingApprovalsResponse:
+    """List writes awaiting human approval (audit-safe summaries). Read-only.
+
+    Returns the pending :class:`ApprovalRequest` summaries — IDs and the fields
+    needed to review the action, never ``WriteRequest.fields`` values or secrets.
+    """
+
+    async def _run() -> ListPendingApprovalsResponse:
+        return ListPendingApprovalsResponse(approvals=gateway.list_pending_approvals())
+
+    return await _guard(_run)
+
+
+@mcp.tool()
+async def approve_request(approval_id: str, approver: str) -> ApprovalActionResponse:
+    """Approve a pending request so an identical guarded_write can proceed.
+
+    Approval bypasses ONLY the approval gate; an engaged kill switch or a hard
+    deny still blocks the write. The approver is recorded in the audit log. An
+    unknown ``approval_id`` maps to the ``invalid_request`` category.
+    """
+
+    async def _run() -> ApprovalActionResponse:
+        approval = gateway.approve_request(approval_id, approver)
+        return ApprovalActionResponse(approval=approval)
+
+    return await _guard(_run)
+
+
+@mcp.tool()
+async def reject_request(approval_id: str, approver: str) -> ApprovalActionResponse:
+    """Reject a pending request so the gated write stays blocked.
+
+    The approver is recorded in the audit log. An unknown ``approval_id`` maps to
+    the ``invalid_request`` category.
+    """
+
+    async def _run() -> ApprovalActionResponse:
+        approval = gateway.reject_request(approval_id, approver)
+        return ApprovalActionResponse(approval=approval)
 
     return await _guard(_run)
 

@@ -61,17 +61,34 @@ def build_event_entry(actor: str, action: str, result: str) -> AuditEntry:
     The effect is mapped from the action to a valid :class:`Effect` value:
     engaging the kill switch moves the gateway to a deny-all posture
     (``Effect.DENY``), releasing it restores the allow posture
-    (``Effect.ALLOW``).
+    (``Effect.ALLOW``). Approval-workflow events (``approve``/``reject``) record
+    under a neutral ``__approval__`` sentinel table; ``result`` carries only the
+    non-secret approval id so no record contents or credentials are logged.
     """
-    effect = Effect.DENY if action == "engage" else Effect.ALLOW
+    if action in ("engage", "release"):
+        effect = Effect.DENY if action == "engage" else Effect.ALLOW
+        return AuditEntry(
+            audit_id=str(uuid.uuid4()),
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            agent_id=actor,
+            table="__killswitch__",
+            operation=action,
+            record_ids=[],
+            reason=f"kill switch {action}: {result}",
+            effect=effect.value,
+            risk_score=0,
+            applied=True,
+        )
+
+    effect = Effect.DENY if action == "reject" else Effect.ALLOW
     return AuditEntry(
         audit_id=str(uuid.uuid4()),
         timestamp=datetime.now(timezone.utc).isoformat(),
         agent_id=actor,
-        table="__killswitch__",
+        table="__approval__",
         operation=action,
         record_ids=[],
-        reason=f"kill switch {action}: {result}",
+        reason=f"approval {action}: {result}",
         effect=effect.value,
         risk_score=0,
         applied=True,
